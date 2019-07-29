@@ -1,32 +1,23 @@
 node{
-  def Namespace = "default"
-  def ImageName = "takoua113/cicd"
-  def Creds	= "takoua_docker_hub"
+
   try{
     stage('Checkout'){
-      git(url: "https://github.com/takoua-kharroubi/pfe.git", branch: "${ghprbSourceBranch}")
-      sh "git rev-parse --short HEAD > .git/commit-id"
-      imageTag = readFile('.git/commit-id').trim()
+     git(url: "https://github.com/takoua-kharroubi/pfe.git", branch: "${ghprbSourceBranch}")
     } 
     stage('RUN Unit Tests'){
       sh "npm install"
       sh "npm test"
     }
     stage('Docker Build') {
-      sh "docker build -t ${ImageName}:${imageTag} ."
+       sh "docker login -u takoua113 -p fasionhouse1993"
+          sh "docker build -t takoua113/boilerplate-node-api:pr-${ghprbPullId} ."
+
     }
-    stage('Scan docker image') {
-      aquaMicroscanner imageName: "${ImageName}:${imageTag}", notCompliesCmd: 'exit 1', onDisallowed: 'fail'
-    }
+    
     stage('Docker Build, Push'){
-      withDockerRegistry([credentialsId: "${Creds}", url: 'https://index.docker.io/v1/']) {        
-        sh "docker push ${ImageName}"
-      }
+       sh "docker push takoua113/boilerplate-node-api:pr-${ghprbPullId}"
+      
     }    
-    stage('Deploy on K8s'){
-      sh "ansible-playbook /var/lib/jenkins/cicd/ansible/deploy.yml  --user=jenkins --extra-vars ImageName=${ImageName} --extra-vars imageTag=${imageTag} --extra-vars Namespace=${Namespace}"
-    }
-  } catch (err) {
-    currentBuild.result = 'FAILURE'
-  }
+    
+}
 }
